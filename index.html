@@ -3,169 +3,143 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Обмен криптовалют</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <title>Обменник</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Inter', sans-serif;
+      padding: 0;
       background: linear-gradient(to right, #1e3c72, #2a5298);
-      color: #fff;
-    }
-    header {
-      text-align: center;
-      padding: 3rem 1rem 1rem;
-      font-size: 2rem;
-      font-weight: 600;
+      color: #333;
     }
     .container {
-      max-width: 500px;
-      margin: 0 auto;
-      background: #fff;
-      color: #333;
-      border-radius: 16px;
+      max-width: 400px;
+      margin: 3rem auto;
       padding: 2rem;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+      padding-top: 1rem;
     }
     .rate {
       text-align: center;
       font-size: 1.2rem;
-      font-weight: 600;
       margin-bottom: 1rem;
     }
-    .exchange-btn {
+    input, textarea {
       width: 100%;
-      padding: 1rem;
-      background-color: #4caf50;
-      color: white;
-      font-size: 1rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-bottom: 1rem;
-      transition: background 0.3s ease;
-    }
-    .exchange-btn:hover {
-      background-color: #45a049;
-    }
-    .telegram {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-    .telegram a {
-      color: #1976d2;
-      font-weight: 500;
-      text-decoration: none;
-    }
-    .review-form h3,
-    .reviews h3 {
-      margin-top: 1rem;
+      padding: 0.5rem;
       margin-bottom: 0.5rem;
-      font-size: 1.2rem;
-    }
-    input,
-    textarea {
-      width: 100%;
-      padding: 0.75rem;
-      margin-bottom: 0.75rem;
-      border-radius: 8px;
       border: 1px solid #ccc;
+      border-radius: 5px;
       font-size: 1rem;
-      font-family: inherit;
+    }
+    .btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 0.7rem;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
     }
     .review {
-      background: #f7f7f7;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-      border-left: 4px solid #2196f3;
-      border-radius: 6px;
+      background: #f5f5f5;
+      border-left: 4px solid #4CAF50;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 5px;
+    }
+    a {
+      color: #1e88e5;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <header>
-    Обмен криптовалют
-  </header>
+  <h1>Обмен криптовалют</h1>
   <div class="container">
-    <div class="rate" id="rate">Загружаем курс...</div>
-    <button class="exchange-btn">Обменять</button>
-    <div class="telegram">
-      Свяжитесь с нами в <a href="https://t.me/" target="_blank">Telegram</a>
-    </div>
-    <div class="review-form">
-      <h3>Оставьте свой отзыв</h3>
-      <input type="text" id="name" placeholder="Ваше имя" />
-      <textarea id="comment" rows="4" placeholder="Ваш отзыв..."></textarea>
-      <button onclick="submitReview()" class="exchange-btn">Отправить</button>
-    </div>
-    <div class="reviews">
-      <h3>Отзывы клиентов</h3>
-      <div id="reviews-list"></div>
-    </div>
+    <div class="rate" id="rate">Загрузка курса...</div>
+    <a class="btn" href="https://t.me/your_telegram">Обменять</a>
+    <p style="text-align:center;">Свяжитесь с нами в <a href="https://t.me/your_telegram">Telegram</a></p>
+
+    <h3>Оставьте свой отзыв</h3>
+    <input type="text" id="name" placeholder="Ваше имя" />
+    <textarea id="comment" placeholder="Ваш отзыв"></textarea>
+    <button class="btn" onclick="submitReview()">Отправить</button>
+
+    <h3>Отзывы клиентов</h3>
+    <div id="reviews"></div>
   </div>
 
   <script>
-    async function getRate() {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=rub');
-        const data = await response.json();
-        document.getElementById('rate').innerText = `Курс: 1 USDT = ${data.tether.rub} RUB`;
-      } catch (err) {
-        document.getElementById('rate').innerText = 'Не удалось загрузить курс';
-      }
-    }
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyC68Hi16z6yuc1Uj-SkAdebcwIho_Rv6xI",
+      authDomain: "reviews-ccd98.firebaseapp.com",
+      projectId: "reviews-ccd98",
+      storageBucket: "reviews-ccd98.firebasestorage.app",
+      messagingSenderId: "816825249785",
+      appId: "1:816825249785:web:a1a9f8dd6a783bd48bd728",
+    };
 
-    async function submitReview() {
-      const name = document.getElementById('name').value.trim();
-      const comment = document.getElementById('comment').value.trim();
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function submitReview() {
+      const name = document.getElementById("name").value.trim();
+      const comment = document.getElementById("comment").value.trim();
       if (!name || !comment) {
-        alert('Пожалуйста, заполните оба поля.');
+        alert("Пожалуйста, заполните оба поля");
         return;
       }
-      try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbxkjKgCPww0IsmROVKtqnI6q2EzzN1mR6OCIF6vZ07VoDN3Dcrgzexq3NB5pszeqbWs/exec', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ name, comment })
-        });
-        if (res.ok) {
-          document.getElementById('name').value = '';
-          document.getElementById('comment').value = '';
-          loadReviews();
-        } else {
-          alert('Ошибка при отправке отзыва.');
-        }
-      } catch (e) {
-        alert('Ошибка соединения.');
-      }
+      const newRef = db.ref("reviews").push();
+      newRef.set({ name, comment }, () => {
+        document.getElementById("name").value = "";
+        document.getElementById("comment").value = "";
+        loadReviews();
+      });
     }
 
-    async function loadReviews() {
+    function loadReviews() {
+      db.ref("reviews").once("value", (snapshot) => {
+        const container = document.getElementById("reviews");
+        container.innerHTML = "";
+        const data = snapshot.val();
+        if (data) {
+          Object.values(data).forEach(r => {
+            const div = document.createElement("div");
+            div.className = "review";
+            div.textContent = `${r.name}: ${r.comment}`;
+            container.appendChild(div);
+          });
+        } else {
+          container.innerHTML = "<p>Пока нет отзывов.</p>";
+        }
+      });
+    }
+
+    async function getRate() {
       try {
-        const res = await fetch('https://script.google.com/macros/s/AKfycbxkjKgCPww0IsmROVKtqnI6q2EzzN1mR6OCIF6vZ07VoDN3Dcrgzexq3NB5pszeqbWs/exec');
+        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=rub");
         const data = await res.json();
-        const container = document.getElementById('reviews-list');
-        container.innerHTML = '';
-        data.forEach(r => {
-          const div = document.createElement('div');
-          div.className = 'review';
-          div.textContent = `${r.name}: ${r.comment}`;
-          container.appendChild(div);
-        });
-      } catch (err) {
-        document.getElementById('reviews-list').innerText = 'Ошибка загрузки отзывов';
+        document.getElementById("rate").innerText = `Курс: 1 USDT = ${data.tether.rub} RUB`;
+      } catch {
+        document.getElementById("rate").innerText = "Не удалось загрузить курс";
       }
     }
 
     window.onload = () => {
       getRate();
       loadReviews();
-    }
+    };
   </script>
 </body>
 </html>
